@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zamonaviy Kod Muharriri</title>
+
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
+
+<!-- CodeMirror Search addon CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css" />
+
+<style>
+  /* Reset */
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #eee;
+    overflow: hidden;
+  }
+
+  /* Header */
+  #header {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(90deg, #007acc, #00b4ff);
+    padding: 12px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    user-select: none;
+  }
+  #header button {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #eee;
+    padding: 10px 18px;
+    margin-right: 15px;
+    font-size: 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+  }
+  #header button:last-child {
+    margin-right: 0;
+  }
+  #header button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+  #header button svg {
+    width: 18px;
+    height: 18px;
+    fill: #eee;
+  }
+
+  /* Container */
+  #container {
+    display: flex;
+    height: calc(100vh - 56px);
+    border-top: 1px solid #222;
+    box-shadow: inset 0 0 40px #000000cc;
+  }
+
+  /* Editors */
+  #editors {
+    width: 50vw;
+    display: flex;
+    flex-direction: column;
+    border-right: 2px solid #222;
+    background: #1e1e1e;
+  }
+
+  /* Tabs */
+  #tabs {
+    display: flex;
+    background: #252525;
+    border-bottom: 2px solid #007acc;
+    user-select: none;
+  }
+  .tab {
+    flex-grow: 1;
+    padding: 14px 0;
+    text-align: center;
+    color: #bbb;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.25s, color 0.25s;
+    position: relative;
+  }
+  .tab:hover {
+    background: #007acc44;
+    color: #fff;
+  }
+  .tab.active {
+    background: #007acc;
+    color: #fff;
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 30%;
+    width: 40%;
+    height: 3px;
+    background: #00e0ff;
+    border-radius: 3px 3px 0 0;
+  }
+
+  /* CodeMirror */
+  .CodeMirror {
+    flex-grow: 1;
+    height: 100%;
+    font-size: 15px;
+  }
+
+  /* Output */
+  #output-container {
+    width: 50vw;
+    height: 100%;
+    background: white;
+    box-shadow: inset 0 0 15px #00000088;
+    border-left: 2px solid #222;
+  }
+  #output {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    #container {
+      flex-direction: column;
+    }
+    #editors, #output-container {
+      width: 100vw;
+      height: 50vh;
+    }
+  }
+
+  /* Qo‘shimcha CodeMirror dialog CSS */
+  .CodeMirror-dialog {
+    background: #333;
+    border: 1px solid #888;
+    color: #eee;
+  }
+</style>
+
+</head>
+<body>
+
+<div id="header">
+  <button id="runBtn" title="Kod ishga tushirish (Ctrl+Enter)">
+    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Run
+  </button>
+  <button id="autoRunBtn" title="Avtomatik ishga tushirishni yoqish/o‘chirish">
+    <svg viewBox="0 0 24 24"><path d="M12 4v1a7 7 0 1 1-4.95 12.05l-1.42 1.42A9 9 0 1 0 12 3z"/></svg> Auto-run: ON
+  </button>
+  <button id="searchBtn" title="Kodda qidirish (Ctrl+F)">
+    <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#eee;"><path d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.48-5.34C15.29 5.59 12.7 3 9.5 3S3.71 5.59 3.71 8.39 6.3 13.78 9.5 13.78c1.61 0 3.09-.59 4.21-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zM9.5 12.28c-2.15 0-3.89-1.74-3.89-3.89S7.35 4.5 9.5 4.5s3.89 1.74 3.89 3.89-1.74 3.89-3.89 3.89z"/></svg>
+    Search
+  </button>
+  <button id="saveBtn" title="Kodlarni saqlash (Ctrl+S)">
+    <svg viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v14l7-3 7 3V5a2 2 0 0 0-2-2z"/></svg> Save
+  </button>
+  <button id="loadBtn" title="Fayl yuklash">
+    <svg viewBox="0 0 24 24"><path d="M12 16v-6m0 0l-4 4m4-4l4 4m-7 4h6"/></svg> Load
+  </button>
+  <button id="fullScreenBtn" title="To‘liq ekran rejimi">
+    <svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zm6 10v6h-6v-2h4v-4h2zm-10 6H4v-6h2v4h4v2z"/></svg> Fullscreen
+  </button>
+  <input type="file" id="fileInput" accept=".html,.css,.js" style="display:none;" />
+</div>
+
+<div id="container">
+  <div id="editors">
+    <div id="tabs">
+      <div class="tab active" data-lang="html">HTML</div>
+      <div class="tab" data-lang="css">CSS</div>
+      <div class="tab" data-lang="js">JavaScript</div>
+    </div>
+    <textarea id="htmlEditor"></textarea>
+    <textarea id="cssEditor" style="display:none;"></textarea>
+    <textarea id="jsEditor" style="display:none;"></textarea>
+  </div>
+  <div id="output-container">
+    <iframe id="output" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+</div>
+
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+
+<!-- CodeMirror Search addon JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+
+<script>
+  // Editors yaratish
+  const htmlEditor = CodeMirror.fromTextArea(document.getElementById('htmlEditor'), {
+    mode: 'htmlmixed',
+    theme: 'material-darker',
+    lineNumbers: true,
+    tabSize: 2,
+    indentUnit: 2,
+    lineWrapping: true,
+  });
+  const cssEditor = CodeMirror.fromTextArea(document.getElementById('cssEditor'), {
+    mode: 'css',
+    theme: 'material-darker',
+    lineNumbers: true,
+    tabSize: 2,
+    indentUnit: 2,
+    lineWrapping: true,
+  });
+  const jsEditor = CodeMirror.fromTextArea(document.getElementById('jsEditor'), {
+    mode: 'javascript',
+    theme: 'material-darker',
+    lineNumbers: true,
+    tabSize: 2,
+    indentUnit: 2,
+    lineWrapping: true,
+  });
+
+  // Tablar orasida almashish
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      const lang = tab.getAttribute('data-lang');
+      htmlEditor.getWrapperElement().style.display = (lang === 'html') ? 'block' : 'none';
+      cssEditor.getWrapperElement().style.display = (lang === 'css') ? 'block' : 'none';
+      jsEditor.getWrapperElement().style.display = (lang === 'js') ? 'block' : 'none';
+    });
+  });
+
+  // Kodni ishga tushirish funksiyasi
+  const output = document.getElementById('output');
+  function runCode() {
+    const html = htmlEditor.getValue();
+    const css = cssEditor.getValue();
+    const js = jsEditor.getValue();
+
+    const fullCode = `
+      <!DOCTYPE html>
+      <html lang="uz">
+      <head>
+      <style>${css}</style>
+      </head>
+      <body>
+      ${html}
+      <script>${js}<\/script>
+      </body>
+      </html>
+    `;
+    output.srcdoc = fullCode;
+  }
+
+  document.getElementById('runBtn').addEventListener('click', runCode);
+
+  // Auto-run rejimi
+  let autoRun = true;
+  const autoRunBtn = document.getElementById('autoRunBtn');
+  autoRunBtn.addEventListener('click', () => {
+    autoRun = !autoRun;
+    autoRunBtn.textContent = `Auto-run: ${autoRun ? 'ON' : 'OFF'}`;
+  });
+
+  // Kod o‘zgarganda agar autoRun yoqilgan bo‘lsa, ishga tushirish
+  function setupAutoRun(editor) {
+    editor.on('change', () => {
+      if (autoRun) runCode();
+      saveCode();
+    });
+  }
+  setupAutoRun(htmlEditor);
+  setupAutoRun(cssEditor);
+  setupAutoRun(jsEditor);
+
+  // Kodni localStorage ga saqlash
+  function saveCode() {
+    const data = {
+      html: htmlEditor.getValue(),
+      css: cssEditor.getValue(),
+      js: jsEditor.getValue()
+    };
+    localStorage.setItem('codeEditorData', JSON.stringify(data));
+  }
+
+  // Saqlangan kodni yuklash
+  function loadCode() {
+    const data = localStorage.getItem('codeEditorData');
+    if (data) {
+      const obj = JSON.parse(data);
+      htmlEditor.setValue(obj.html || '');
+      cssEditor.setValue(obj.css || '');
+      jsEditor.setValue(obj.js || '');
+      runCode();
+    }
+  }
+  loadCode();
+
+  // Fayl yuklash
+  const fileInput = document.getElementById('fileInput');
+  document.getElementById('loadBtn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const content = evt.target.result;
+      if (file.name.endsWith('.html')) {
+        htmlEditor.setValue(content);
+      } else if (file.name.endsWith('.css')) {
+        cssEditor.setValue(content);
+      } else if (file.name.endsWith('.js')) {
+        jsEditor.setValue(content);
+      }
+      runCode();
+    };
+    reader.readAsText(file);
+  });
+
+  // Fayl saqlash
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const blob = new Blob([
+      `<!-- HTML -->\n${htmlEditor.getValue()}\n\n/* CSS */\n${cssEditor.getValue()}\n\n// JavaScript\n${jsEditor.getValue()}`
+    ], { type: 'text/plain' });
+
+    const a = document.createElement('a');
+    a.download = 'code.txt';
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // To‘liq ekran rejimi
+  const fullScreenBtn = document.getElementById('fullScreenBtn');
+  fullScreenBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
+  });
+
+  // Klaviatura qisqa tugmalari
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      runCode();
+    }
+    if (e.ctrlKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveCode();
+      alert('Kod saqlandi!');
+    }
+    if (e.ctrlKey && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      // Faol editorni aniqlaymiz va qidirish oynasini ochamiz
+      let activeEditor;
+      document.querySelectorAll('.tab').forEach(tab => {
+        if (tab.classList.contains('active')) {
+          const lang = tab.getAttribute('data-lang');
+          if (lang === 'html') activeEditor = htmlEditor;
+          else if (lang === 'css') activeEditor = cssEditor;
+          else if (lang === 'js') activeEditor = jsEditor;
+        }
+      });
+      if (activeEditor) {
+        activeEditor.execCommand('find');
+      }
+    }
+  });
+
+  // Qidirish tugmasi funksiyasi
+  document.getElementById('searchBtn').addEventListener('click', () => {
+    let activeEditor;
+    document.querySelectorAll('.tab').forEach(tab => {
+      if (tab.classList.contains('active')) {
+        const lang = tab.getAttribute('data-lang');
+        if (lang === 'html') activeEditor = htmlEditor;
+        else if (lang === 'css') activeEditor = cssEditor;
+        else if (lang === 'js') activeEditor = jsEditor;
+      }
+    });
+    if (activeEditor) {
+      activeEditor.execCommand('find');
+    }
+  });
+</script>
+
+</body>
+</html>
